@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, useRef } from 'react'
+import { createBrowserClient } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 
 type Mission = {
@@ -9,7 +10,8 @@ type Mission = {
 }
 
 export default function DonnerAvisPage() {
-  const [mission, setMission] = useState<Mission | null | 'none'>('none')
+  const [mission, setMission] = useState<Mission | null>(null)
+  const [hasMission, setHasMission] = useState(false)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [screenshot, setScreenshot] = useState<File | null>(null)
@@ -17,19 +19,33 @@ export default function DonnerAvisPage() {
   const [timeLeft, setTimeLeft] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const loadMission = () => {
+  const getToken = async () => {
+    const supabase = createBrowserClient()
+    const { data: { session } } = await supabase.auth.getSession()
+    return session?.access_token || ''
+  }
+
+  const loadMission = async () => {
     setLoading(true)
-    fetch('/api/membre/missions').then(r => r.json()).then(d => {
-      setMission(d.mission || null)
-      setLoading(false)
+    const token = await getToken()
+    const res = await fetch('/api/membre/missions', {
+      headers: { Authorization: `Bearer ${token}` }
     })
+    const data = await res.json()
+    if (data.mission) {
+      setMission(data.mission)
+      setHasMission(true)
+    } else {
+      setMission(null)
+      setHasMission(false)
+    }
+    setLoading(false)
   }
 
   useEffect(() => { loadMission() }, [])
 
-  // Timer
   useEffect(() => {
-    if (!mission || mission === 'none' || !('id' in mission)) return
+    if (!mission) return
     const tick = () => {
       const diff = new Date(mission.expire_at).getTime() - Date.now()
       if (diff <= 0) { setTimeLeft('Expirée'); return }
@@ -44,7 +60,11 @@ export default function DonnerAvisPage() {
 
   const demanderMission = async () => {
     setLoading(true)
-    const res = await fetch('/api/membre/missions', { method: 'POST' })
+    const token = await getToken()
+    const res = await fetch('/api/membre/missions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }
+    })
     const data = await res.json()
     if (data.success) { loadMission() }
     else { toast.error(data.error || 'Aucune demande disponible pour le moment'); setLoading(false) }
@@ -58,16 +78,22 @@ export default function DonnerAvisPage() {
   }
 
   const soumettre = async () => {
-    if (!mission || !('id' in mission) || !screenshot) return
+    if (!mission || !screenshot) return
     setSubmitting(true)
+    const token = await getToken()
     const form = new FormData()
     form.append('mission_id', mission.id)
     form.append('screenshot', screenshot)
-    const res = await fetch('/api/membre/missions', { method: 'PATCH', body: form })
+    const res = await fetch('/api/membre/missions', {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form
+    })
     const data = await res.json()
     if (data.success) {
-      toast.success(`✅ Validé ! Nouveau solde : ${data.credits_nouveau_solde} crédit(s)`)
+      toast.success(`Validé ! Nouveau solde : ${data.credits_nouveau_solde} crédit(s)`)
       setMission(null)
+      setHasMission(false)
       setScreenshot(null)
       setPreview(null)
     } else {
@@ -83,8 +109,7 @@ export default function DonnerAvisPage() {
       <h1 className="text-2xl font-bold text-gray-900 mb-2">Donner un avis</h1>
       <p className="text-gray-500 text-sm mb-6">Laissez un avis sur la fiche proposée et gagnez 1 crédit.</p>
 
-      {/* Pas de mission active */}
-      {!mission && (
+      {!hasMission && (
         <div className="card text-center py-10">
           <div className="text-4xl mb-3">✍️</div>
           <h2 className="font-semibold text-gray-900 mb-2">Prêt à gagner un crédit ?</h2>
@@ -95,8 +120,7 @@ export default function DonnerAvisPage() {
         </div>
       )}
 
-      {/* Mission active */}
-      {mission && 'id' in mission && (
+      {hasMission && mission && (
         <div className="space-y-4">
           <div className="card border-2 border-teal-200 bg-teal-50">
             <div className="flex items-start justify-between mb-3">
@@ -105,7 +129,7 @@ export default function DonnerAvisPage() {
                 <div className="font-semibold text-gray-900">Laissez un avis sur cette fiche</div>
               </div>
               <div className="text-xs text-amber-700 bg-amber-50 border border-amber-100 px-2 py-1 rounded-lg font-medium">
-                ⏱ {timeLeft}
+                {timeLeft}
               </div>
             </div>
             <a href={mission.demandes.fiche_google_url} target="_blank" rel="noopener noreferrer"
@@ -148,7 +172,7 @@ export default function DonnerAvisPage() {
                     className="btn-secondary text-sm flex-1">Changer</button>
                   <button onClick={soumettre} disabled={submitting}
                     className="btn-primary text-sm flex-1">
-                    {submitting ? 'Validation...' : '✓ Valider et gagner +1 crédit'}
+                    {submitting ? 'Validation...' : 'Valider et gagner +1 crédit'}
                   </button>
                 </div>
               </div>
