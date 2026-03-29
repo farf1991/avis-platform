@@ -4,8 +4,7 @@ import { addDays, format } from 'date-fns'
 
 export async function GET() {
   const supabase = createAdminClient()
-  const today = new Date()
-  const alerteDate = format(addDays(today, 3), 'yyyy-MM-dd')
+  const alerteDate = format(addDays(new Date(), 3), 'yyyy-MM-dd')
 
   const [
     { count: membres_actifs },

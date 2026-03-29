@@ -8,11 +8,11 @@ import { useEffect, useState } from 'react'
 export default function MembreNav() {
   const pathname = usePathname()
   const router = useRouter()
-  const supabase = createBrowserClient()
   const [prenom, setPrenom] = useState('')
   const [credits, setCredits] = useState<number | null>(null)
 
   useEffect(() => {
+    const supabase = createBrowserClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
       supabase.from('membres').select('prenom, credits').eq('user_id', user.id).single()
@@ -48,8 +48,11 @@ export default function MembreNav() {
                 {credits} crédit{credits > 1 ? 's' : ''}
               </div>
             )}
-            <button onClick={async () => { await supabase.auth.signOut(); router.push('/login') }}
-              className="text-xs text-gray-400 hover:text-gray-600">Sortir</button>
+            <button onClick={async () => {
+              const supabase = createBrowserClient()
+              await supabase.auth.signOut()
+              router.push('/login')
+            }} className="text-xs text-gray-400 hover:text-gray-600">Sortir</button>
           </div>
         </div>
       </div>

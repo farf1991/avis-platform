@@ -8,19 +8,18 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const supabase = createBrowserClient()
   const router = useRouter()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    const supabase = createBrowserClient()
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       toast.error('Email ou mot de passe incorrect')
       setLoading(false)
       return
     }
-    // Vérifier si admin
     const { data: admin } = await supabase.from('admins').select('id').eq('user_id', data.user.id).single()
     if (admin) router.push('/admin')
     else router.push('/membre')

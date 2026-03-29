@@ -1,11 +1,6 @@
-import { createServerClient } from '@/lib/supabase'
-import { redirect } from 'next/navigation'
 import MembreNav from '@/components/membre/MembreNav'
 
-export default async function MembreLayout({ children }: { children: React.ReactNode }) {
-  const supabase = createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+export default function MembreLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-gray-50">
       <MembreNav />

@@ -14,9 +14,9 @@ const links = [
 export default function AdminNav() {
   const pathname = usePathname()
   const router = useRouter()
-  const supabase = createBrowserClient()
 
   const logout = async () => {
+    const supabase = createBrowserClient()
     await supabase.auth.signOut()
     router.push('/login')
   }
