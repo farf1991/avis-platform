@@ -1,21 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase'
 import { notifier } from '@/lib/whatsapp'
+import { createClient } from '@supabase/supabase-js'
 
 async function getMembre(req: NextRequest) {
-  const supabase = createAdminClient()
-  const auth = req.headers.get('authorization') || ''
-  const token = auth.replace('Bearer ', '').trim()
-  if (!token) return null
-  const { data: { user }, error } = await supabase.auth.getUser(token)
-  if (error || !user) return null
-  const { data: membre } = await supabase
-    .from('membres')
-    .select('*')
-    .eq('user_id', user.id)
-    .eq('actif', true)
-    .single()
-  return membre
+  try {
+    const supabase = createAdminClient()
+    
+    // Essayer le token Bearer d'abord
+    const auth = req.headers.get('authorization') || ''
+    const token = auth.replace('Bearer ', '').trim()
+    
+    if (token) {
+      const { data: { user } } = await supabase.auth.getUser(token)
+      if (user) {
+        const { data: membre } = await supabase
+          .from('membres')
+          .select('*')
+          .eq('user_id', user.id)
+          .single()
+        if (membre) return membre
+      }
+    }
+
+    // Essayer le cookie Supabase
+    const cookies = req.headers.get('cookie') || ''
+    const tokenMatch = cookies.match(/sb-[^-]+-auth-token=([^;]+)/)
+    if (tokenMatch) {
+      try {
+        const tokenData = JSON.parse(decodeURIComponent(tokenMatch[1]))
+        const accessToken = tokenData[0] || tokenData.access_token
+        if (accessToken) {
+          const { data: { user } } = await supabase.auth.getUser(accessToken)
+          if (user) {
+            const { data: membre } = await supabase
+              .from('membres')
+              .select('*')
+              .eq('user_id', user.id)
+              .single()
+            if (membre) return membre
+          }
+        }
+      } catch {}
+    }
+
+    return null
+  } catch {
+    return null
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -36,6 +68,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const membre = await getMembre(req)
   if (!membre) return NextResponse.json({ success: false, error: 'Non autorisé' }, { status: 401 })
+  if (!membre.actif) return NextResponse.json({ success: false, error: 'Compte inactif' }, { status: 403 })
   const supabase = createAdminClient()
   const { data } = await supabase.rpc('assigner_mission', { p_membre_id: membre.id })
   if (data?.success) {
