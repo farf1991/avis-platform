@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
@@ -8,7 +8,6 @@ import toast from 'react-hot-toast'
 
 export default function MembreFichePage() {
   const { id } = useParams()
-  const router = useRouter()
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [creditMontant, setCreditMontant] = useState('')
@@ -50,16 +49,20 @@ export default function MembreFichePage() {
   if (loading) return <div className="card text-center py-12 text-gray-400">Chargement...</div>
   if (!data?.membre) return <div className="card text-center py-12 text-gray-400">Membre introuvable</div>
 
-  const { membre, historique, missions, demandes } = data
+  const { membre, historique, stats_membre } = data
   const expireBientot = new Date(membre.date_fin_abonnement) <= new Date(Date.now() + 3 * 86400000)
 
   const typeLabel: any = {
-    gain_avis: '+ Avis donné', consommation_demande: '- Demande d\'avis',
-    credit_manuel: '+ Crédit manuel', expiration: '- Expiration'
+    gain_avis: '+ Avis donné',
+    consommation_demande: "- Demande d'avis",
+    credit_manuel: '+ Crédit manuel',
+    expiration: '- Expiration'
   }
   const typeColor: any = {
-    gain_avis: 'text-teal-700', consommation_demande: 'text-red-600',
-    credit_manuel: 'text-purple-700', expiration: 'text-gray-500'
+    gain_avis: 'text-teal-700',
+    consommation_demande: 'text-red-600',
+    credit_manuel: 'text-purple-700',
+    expiration: 'text-gray-500'
   }
 
   return (
@@ -70,25 +73,32 @@ export default function MembreFichePage() {
         {membre.actif ? <span className="badge-actif">Actif</span> : <span className="badge-inactif">Inactif</span>}
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-5 gap-3 mb-6">
         <div className="card text-center">
-          <div className="text-3xl font-bold text-teal-700">{membre.credits}</div>
-          <div className="text-xs text-gray-500 mt-1">Crédits disponibles</div>
+          <div className="text-2xl font-bold text-teal-700">{membre.credits}</div>
+          <div className="text-xs text-gray-500 mt-1">Crédits</div>
         </div>
         <div className="card text-center">
-          <div className="text-3xl font-bold text-gray-900">{membre.taux_completion ?? 100}%</div>
-          <div className="text-xs text-gray-500 mt-1">Taux complétion</div>
+          <div className="text-2xl font-bold text-gray-900">{stats_membre?.avis_deposes ?? 0}</div>
+          <div className="text-xs text-gray-500 mt-1">Avis déposés</div>
         </div>
         <div className="card text-center">
-          <div className={`text-3xl font-bold ${expireBientot ? 'text-amber-600' : 'text-gray-900'}`}>
+          <div className="text-2xl font-bold text-gray-900">{stats_membre?.avis_recus ?? 0}</div>
+          <div className="text-xs text-gray-500 mt-1">Avis reçus</div>
+        </div>
+        <div className="card text-center">
+          <div className="text-2xl font-bold text-gray-900">{stats_membre?.demandes_total ?? 0}</div>
+          <div className="text-xs text-gray-500 mt-1">Demandes total</div>
+        </div>
+        <div className="card text-center">
+          <div className={`text-2xl font-bold ${expireBientot ? 'text-amber-600' : 'text-gray-900'}`}>
             {format(new Date(membre.date_fin_abonnement), 'dd MMM', { locale: fr })}
           </div>
-          <div className="text-xs text-gray-500 mt-1">Fin abonnement</div>
+          <div className="text-xs text-gray-500 mt-1">Fin abo</div>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 mb-6">
-        {/* Infos */}
         <div className="card space-y-3">
           <h2 className="font-semibold text-gray-900 text-sm">Informations</h2>
           {[
@@ -96,6 +106,7 @@ export default function MembreFichePage() {
             ['WhatsApp', membre.whatsapp],
             ['Commerce', membre.fiche_google_nom || '—'],
             ['Inscrit le', format(new Date(membre.created_at), 'dd MMM yyyy', { locale: fr })],
+            ['Taux complétion', `${membre.taux_completion ?? 100}%`],
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between text-sm">
               <span className="text-gray-500">{k}</span>
@@ -108,7 +119,6 @@ export default function MembreFichePage() {
           </div>
         </div>
 
-        {/* Actions */}
         <div className="card space-y-3">
           <h2 className="font-semibold text-gray-900 text-sm">Actions</h2>
           <div className="grid grid-cols-2 gap-2">
@@ -125,13 +135,11 @@ export default function MembreFichePage() {
               <input type="number" min="1" max="100" placeholder="Nb crédits"
                 className="input text-sm flex-1" value={creditMontant}
                 onChange={e => setCreditMontant(e.target.value)} />
-              <button
-                onClick={() => {
-                  if (!creditMontant || Number(creditMontant) <= 0) return toast.error('Montant invalide')
-                  action('crediter', { montant: Number(creditMontant), note: creditNote || null })
-                  setCreditMontant(''); setCreditNote('')
-                }}
-                disabled={actionLoading} className="btn-primary text-xs px-3">Créditer</button>
+              <button onClick={() => {
+                if (!creditMontant || Number(creditMontant) <= 0) return toast.error('Montant invalide')
+                action('crediter', { montant: Number(creditMontant), note: creditNote || null })
+                setCreditMontant(''); setCreditNote('')
+              }} disabled={actionLoading} className="btn-primary text-xs px-3">Créditer</button>
             </div>
             <input type="text" placeholder="Note (optionnel)" className="input text-xs mt-2"
               value={creditNote} onChange={e => setCreditNote(e.target.value)} />
@@ -139,7 +147,6 @@ export default function MembreFichePage() {
         </div>
       </div>
 
-      {/* Historique crédits */}
       <div className="card mb-4">
         <h2 className="font-semibold text-gray-900 text-sm mb-3">Historique crédits</h2>
         {!historique?.length ? <p className="text-xs text-gray-400">Aucun mouvement</p> : (
