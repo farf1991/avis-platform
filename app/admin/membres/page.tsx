@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
@@ -10,14 +10,14 @@ export default function MembresPage() {
   const [search, setSearch] = useState('')
   const [filtre, setFiltre] = useState<'tous' | 'actifs' | 'inactifs'>('tous')
 
-  const load = () => {
-    fetch('/api/admin/membres/liste').then(r => r.json()).then(d => {
-      setMembres(d.membres || [])
-      setLoading(false)
-    })
-  }
+  const load = useCallback(() => {
+    setLoading(true)
+    fetch('/api/admin/membres/liste', { cache: 'no-store' })
+      .then(r => r.json())
+      .then(d => { setMembres(d.membres || []); setLoading(false) })
+  }, [])
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [load])
 
   const filtered = membres.filter(m => {
     const matchSearch = `${m.nom} ${m.prenom} ${m.email}`.toLowerCase().includes(search.toLowerCase())
@@ -28,8 +28,11 @@ export default function MembresPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Membres</h1>
-        <Link href="/admin/membres/nouveau" className="btn-primary text-sm">+ Nouveau membre</Link>
+        <h1 className="text-2xl font-bold text-gray-900">Membres ({membres.length})</h1>
+        <div className="flex gap-2">
+          <button onClick={load} className="btn-secondary text-sm">↻ Rafraîchir</button>
+          <Link href="/admin/membres/nouveau" className="btn-primary text-sm">+ Nouveau membre</Link>
+        </div>
       </div>
 
       <div className="card mb-4">
