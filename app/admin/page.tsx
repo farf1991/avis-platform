@@ -1,25 +1,21 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { differenceInDays, format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import toast from 'react-hot-toast'
 
-type Stats = {
-  membres_actifs: number
-  alertes_renouvellement: number
-  alertes_details: any[]
-  credits_en_circulation: number
-  missions_en_cours: number
-  demandes_en_attente: number
-}
-
 export default function AdminDashboard() {
-  const [stats, setStats] = useState<Stats | null>(null)
+  const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetch('/api/admin/dashboard').then(r => r.json()).then(d => { setStats(d); setLoading(false) })
+  const load = useCallback(() => {
+    setLoading(true)
+    fetch(`/api/admin/dashboard?t=${Date.now()}`)
+      .then(r => r.json())
+      .then(d => { setStats(d); setLoading(false) })
   }, [])
+
+  useEffect(() => { load() }, [load])
 
   const action = async (id: string, act: string) => {
     const res = await fetch(`/api/admin/membres/${id}`, {
@@ -29,28 +25,26 @@ export default function AdminDashboard() {
     const data = await res.json()
     if (data.success || data.success !== false) {
       toast.success(act === 'rappel_renouvellement' ? 'Rappel WhatsApp envoyé' : 'Abonnement renouvelé')
-      fetch('/api/admin/dashboard').then(r => r.json()).then(setStats)
+      load()
     }
   }
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="text-gray-400">Chargement...</div>
-    </div>
-  )
+  if (loading) return <div className="flex items-center justify-center h-64 text-gray-400">Chargement...</div>
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Dashboard</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <button onClick={load} className="btn-secondary text-sm">↻ Rafraîchir</button>
+      </div>
 
-      {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         {[
-          { label: 'Membres actifs', value: stats?.membres_actifs, color: 'teal', icon: '👥' },
-          { label: 'Alertes renouvellement', value: stats?.alertes_renouvellement, color: 'amber', icon: '🔔' },
-          { label: 'Crédits en circulation', value: stats?.credits_en_circulation, color: 'purple', icon: '💰' },
-          { label: 'Missions en cours', value: stats?.missions_en_cours, color: 'blue', icon: '📋' },
-          { label: 'File d\'attente', value: stats?.demandes_en_attente, color: 'gray', icon: '⏳' },
+          { label: 'Membres actifs', value: stats?.membres_actifs, icon: '👥' },
+          { label: 'Alertes renouvellement', value: stats?.alertes_renouvellement, icon: '🔔' },
+          { label: 'Crédits en circulation', value: stats?.credits_en_circulation, icon: '💰' },
+          { label: 'Missions en cours', value: stats?.missions_en_cours, icon: '📋' },
+          { label: "File d'attente", value: stats?.demandes_en_attente, icon: '⏳' },
         ].map(kpi => (
           <div key={kpi.label} className="card text-center">
             <div className="text-2xl mb-1">{kpi.icon}</div>
@@ -60,7 +54,6 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {/* Alertes renouvellement */}
       {stats?.alertes_details && stats.alertes_details.length > 0 && (
         <div className="card">
           <h2 className="text-base font-semibold text-gray-900 mb-4">
@@ -96,7 +89,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {stats?.alertes_details?.length === 0 && (
+      {(!stats?.alertes_details || stats.alertes_details.length === 0) && (
         <div className="card text-center py-8 text-gray-400">
           <div className="text-3xl mb-2">✅</div>
           <div className="text-sm">Aucun renouvellement urgent dans les 3 prochains jours</div>
