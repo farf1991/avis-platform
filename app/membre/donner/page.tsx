@@ -19,10 +19,11 @@ export default function DonnerAvisPage() {
   const [timeLeft, setTimeLeft] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const getToken = async () => {
+ const getToken = async () => {
     const supabase = createBrowserClient()
-    const { data: { session } } = await supabase.auth.getSession()
-    return session?.access_token || ''
+    const { data } = await supabase.auth.getSession()
+    console.log('Session:', data.session?.access_token?.substring(0, 20))
+    return data.session?.access_token || ''
   }
 
   const loadMission = async () => {
