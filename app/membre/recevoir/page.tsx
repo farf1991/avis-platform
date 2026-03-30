@@ -19,12 +19,20 @@ export default function RecevoirAvisPage() {
   const [submitting, setSubmitting] = useState(false)
   const supabase = createBrowserClient()
 
+  const getToken = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    return session?.access_token || ''
+  }
+
   const load = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     const { data: membre } = await supabase.from('membres').select('credits').eq('user_id', user.id).single()
     setCredits(membre?.credits ?? 0)
-    const res = await fetch('/api/membre/demandes')
+    const token = await getToken()
+    const res = await fetch('/api/membre/demandes', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
     const data = await res.json()
     setDemandes(data.demandes || [])
     setLoading(false)
@@ -35,7 +43,11 @@ export default function RecevoirAvisPage() {
   const soumettreDemande = async () => {
     if (credits < 1) return toast.error('Solde insuffisant')
     setSubmitting(true)
-    const res = await fetch('/api/membre/demandes', { method: 'POST' })
+    const token = await getToken()
+    const res = await fetch('/api/membre/demandes', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }
+    })
     const data = await res.json()
     if (data.success) {
       toast.success('Demande soumise ! Votre fiche est en file d\'attente.')
@@ -57,7 +69,6 @@ export default function RecevoirAvisPage() {
       <h1 className="text-2xl font-bold text-gray-900 mb-2">Recevoir un avis</h1>
       <p className="text-gray-500 text-sm mb-6">Chaque demande coûte 1 crédit. Votre fiche entre dans la file d'attente.</p>
 
-      {/* Solde + action */}
       <div className="card mb-6">
         <div className="flex items-center justify-between">
           <div>
@@ -76,7 +87,6 @@ export default function RecevoirAvisPage() {
         )}
       </div>
 
-      {/* Demandes actives */}
       {actives.length > 0 && (
         <div className="card mb-4">
           <h2 className="font-semibold text-gray-900 text-sm mb-3">En cours ({actives.length})</h2>
@@ -85,7 +95,6 @@ export default function RecevoirAvisPage() {
               <div key={d.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div>
                   <div className="text-xs text-gray-500">Demande du {format(new Date(d.created_at), 'dd MMM yyyy à HH:mm', { locale: fr })}</div>
-                  <div className="text-xs text-gray-400 truncate max-w-xs">{d.fiche_google_url}</div>
                 </div>
                 <span className={`text-xs px-2 py-1 rounded-full font-medium ${statutLabel[d.statut].color}`}>
                   {statutLabel[d.statut].label}
@@ -96,16 +105,13 @@ export default function RecevoirAvisPage() {
         </div>
       )}
 
-      {/* Demandes terminées */}
       {terminees.length > 0 && (
         <div className="card">
           <h2 className="font-semibold text-gray-900 text-sm mb-3">Historique</h2>
           <div className="space-y-2">
             {terminees.slice(0, 10).map((d: any) => (
               <div key={d.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <div className="text-xs text-gray-500">{format(new Date(d.created_at), 'dd MMM yyyy', { locale: fr })}</div>
-                </div>
+                <div className="text-xs text-gray-500">{format(new Date(d.created_at), 'dd MMM yyyy', { locale: fr })}</div>
                 <span className={`text-xs px-2 py-1 rounded-full font-medium ${statutLabel[d.statut].color}`}>
                   {statutLabel[d.statut].label}
                 </span>
