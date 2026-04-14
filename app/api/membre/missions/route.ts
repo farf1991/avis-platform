@@ -6,24 +6,15 @@ import { createClient } from '@supabase/supabase-js'
 async function getMembre(req: NextRequest) {
   try {
     const supabase = createAdminClient()
-    
-    // Essayer le token Bearer d'abord
     const auth = req.headers.get('authorization') || ''
     const token = auth.replace('Bearer ', '').trim()
-    
     if (token) {
       const { data: { user } } = await supabase.auth.getUser(token)
       if (user) {
-        const { data: membre } = await supabase
-          .from('membres')
-          .select('*')
-          .eq('user_id', user.id)
-          .single()
+        const { data: membre } = await supabase.from('membres').select('*').eq('user_id', user.id).single()
         if (membre) return membre
       }
     }
-
-    // Essayer le cookie Supabase
     const cookies = req.headers.get('cookie') || ''
     const tokenMatch = cookies.match(/sb-[^-]+-auth-token=([^;]+)/)
     if (tokenMatch) {
@@ -33,17 +24,12 @@ async function getMembre(req: NextRequest) {
         if (accessToken) {
           const { data: { user } } = await supabase.auth.getUser(accessToken)
           if (user) {
-            const { data: membre } = await supabase
-              .from('membres')
-              .select('*')
-              .eq('user_id', user.id)
-              .single()
+            const { data: membre } = await supabase.from('membres').select('*').eq('user_id', user.id).single()
             if (membre) return membre
           }
         }
       } catch {}
     }
-
     return null
   } catch {
     return null
@@ -54,14 +40,7 @@ export async function GET(req: NextRequest) {
   const membre = await getMembre(req)
   if (!membre) return NextResponse.json({ mission: null })
   const supabase = createAdminClient()
-  const { data: mission } = await supabase
-    .from('missions')
-    .select('*, demandes(fiche_google_url)')
-    .eq('membre_id', membre.id)
-    .eq('statut', 'assignee')
-    .order('assignee_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  const { data: mission } = await supabase.from('missions').select('*, demandes(fiche_google_url)').eq('membre_id', membre.id).eq('statut', 'assignee').order('assignee_at', { ascending: false }).limit(1).maybeSingle()
   return NextResponse.json({ mission: mission || null })
 }
 
