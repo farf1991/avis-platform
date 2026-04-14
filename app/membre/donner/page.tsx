@@ -17,20 +17,24 @@ export default function DonnerAvisPage() {
   const [screenshot, setScreenshot] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [timeLeft, setTimeLeft] = useState('')
+  const [membreId, setMembreId] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
- const getToken = async () => {
+  const getMembreId = async () => {
     const supabase = createBrowserClient()
-    const { data } = await supabase.auth.getSession()
-    console.log('Session:', data.session?.access_token?.substring(0, 20))
-    return data.session?.access_token || ''
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return null
+    const { data: membre } = await supabase.from('membres').select('id').eq('user_id', user.id).single()
+    return membre?.id || null
   }
 
   const loadMission = async () => {
     setLoading(true)
-    const token = await getToken()
+    const id = await getMembreId()
+    if (!id) { setLoading(false); return }
+    setMembreId(id)
     const res = await fetch('/api/membre/missions', {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { 'x-membre-id': id }
     })
     const data = await res.json()
     if (data.mission) {
@@ -60,11 +64,11 @@ export default function DonnerAvisPage() {
   }, [mission])
 
   const demanderMission = async () => {
+    if (!membreId) return
     setLoading(true)
-    const token = await getToken()
     const res = await fetch('/api/membre/missions', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { 'x-membre-id': membreId }
     })
     const data = await res.json()
     if (data.success) { loadMission() }
@@ -79,15 +83,14 @@ export default function DonnerAvisPage() {
   }
 
   const soumettre = async () => {
-    if (!mission || !screenshot) return
+    if (!mission || !screenshot || !membreId) return
     setSubmitting(true)
-    const token = await getToken()
     const form = new FormData()
     form.append('mission_id', mission.id)
     form.append('screenshot', screenshot)
     const res = await fetch('/api/membre/missions', {
       method: 'PATCH',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { 'x-membre-id': membreId },
       body: form
     })
     const data = await res.json()
@@ -150,10 +153,15 @@ export default function DonnerAvisPage() {
             <h3 className="font-semibold text-gray-900 text-sm mb-1">Comment faire ?</h3>
             <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
               <li>Cliquez sur le lien ci-dessus pour ouvrir la fiche Google</li>
-              <li>Laissez un avis honnête avec votre compte Google</li>
+              <li>Laissez un avis 4,5 étoiles au moins avec votre compte Google (celui que vous utilisez pour accéder à Top Avis)</li>
               <li>Faites une capture d'écran de votre avis publié</li>
               <li>Soumettez le screenshot ci-dessous</li>
             </ol>
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="font-semibold text-red-700 text-sm mb-1">⚠️ IMPORTANT</div>
+              <p className="text-xs text-red-600">Tous les avis sont vérifiés à partir des captures écrans envoyées.</p>
+              <p className="text-xs text-red-600 mt-1">Dans un souci d'équité entre tous les membres de Top Avis, toute tentative de fraude ou non respect des règles entrainera une radiation immédiate de la plateforme sans préavis.</p>
+            </div>
           </div>
 
           <div className="card">

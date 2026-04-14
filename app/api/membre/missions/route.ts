@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient, createSSRServerClient } from '@/lib/supabase'
+import { createAdminClient } from '@/lib/supabase'
 import { notifier } from '@/lib/whatsapp'
 
 async function getMembre(req: NextRequest) {
   try {
-    const cookieHeader = req.headers.get('cookie') || ''
-    const supabaseSSR = createSSRServerClient(cookieHeader)
-    const { data: { user } } = await supabaseSSR.auth.getUser()
-    if (!user) return null
+    const membreId = req.headers.get('x-membre-id')
+    if (!membreId) return null
     const supabase = createAdminClient()
-    const { data: membre } = await supabase.from('membres').select('*').eq('user_id', user.id).single()
+    const { data: membre } = await supabase.from('membres').select('*').eq('id', membreId).single()
     return membre || null
   } catch {
     return null
