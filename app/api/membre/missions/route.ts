@@ -1,36 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase'
+import { createAdminClient, createSSRServerClient } from '@/lib/supabase'
 import { notifier } from '@/lib/whatsapp'
-import { createClient } from '@supabase/supabase-js'
 
 async function getMembre(req: NextRequest) {
   try {
+    const cookieHeader = req.headers.get('cookie') || ''
+    const supabaseSSR = createSSRServerClient(cookieHeader)
+    const { data: { user } } = await supabaseSSR.auth.getUser()
+    if (!user) return null
     const supabase = createAdminClient()
-    const auth = req.headers.get('authorization') || ''
-    const token = auth.replace('Bearer ', '').trim()
-    if (token) {
-      const { data: { user } } = await supabase.auth.getUser(token)
-      if (user) {
-        const { data: membre } = await supabase.from('membres').select('*').eq('user_id', user.id).single()
-        if (membre) return membre
-      }
-    }
-    const cookies = req.headers.get('cookie') || ''
-    const tokenMatch = cookies.match(/sb-[^-]+-auth-token=([^;]+)/)
-    if (tokenMatch) {
-      try {
-        const tokenData = JSON.parse(decodeURIComponent(tokenMatch[1]))
-        const accessToken = tokenData[0] || tokenData.access_token
-        if (accessToken) {
-          const { data: { user } } = await supabase.auth.getUser(accessToken)
-          if (user) {
-            const { data: membre } = await supabase.from('membres').select('*').eq('user_id', user.id).single()
-            if (membre) return membre
-          }
-        }
-      } catch {}
-    }
-    return null
+    const { data: membre } = await supabase.from('membres').select('*').eq('user_id', user.id).single()
+    return membre || null
   } catch {
     return null
   }
