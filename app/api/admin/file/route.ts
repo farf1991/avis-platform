@@ -1,7 +1,7 @@
-import { NextResponse }
-
-export const dynamic = 'force-dynamic' from 'next/server'
+import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
   const supabase = createAdminClient()
