@@ -1,4 +1,6 @@
-import { NextResponse } from 'next/server'
+import { NextResponse }
+
+export const dynamic = 'force-dynamic' from 'next/server'
 import { createAdminClient } from '@/lib/supabase'
 
 export async function GET() {
