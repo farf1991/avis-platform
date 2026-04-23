@@ -31,3 +31,4 @@ export async function GET() {
     demandes_en_attente: demandes_en_attente ?? 0
   }, { headers: { 'Cache-Control': 'no-store' } })
 }
+// cache bust Jeu 23 avr 2026 10:15:07 +01
