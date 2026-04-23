@@ -18,7 +18,7 @@ export async function GET() {
     supabase.from('membres').select('id, nom, prenom, whatsapp, date_fin_abonnement, credits, email')
       .eq('actif', true).lte('date_fin_abonnement', alerteDate).order('date_fin_abonnement'),
     supabase.from('membres').select('credits').eq('actif', true),
-    supabase.from('missions').select('*', { count: 'exact', head: true }).eq('statut', 'assignee'),
+    supabase.from('missions').select('*', { count: 'exact', head: true }).eq('statut', 'assignee').gt('expire_at', new Date().toISOString()),
     supabase.from('demandes').select('*', { count: 'exact', head: true }).eq('statut', 'en_attente')
   ])
   const credits_en_circulation = credits_data?.reduce((sum, m) => sum + (m.credits || 0), 0) ?? 0
