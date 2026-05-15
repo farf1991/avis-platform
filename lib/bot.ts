@@ -61,27 +61,13 @@ export async function handleMessage(phone: string, text: string, mediaUrl?: stri
   if (!session) {
     const { data: newSession } = await supabase
       .from('bot_sessions')
-      .insert({ phone: cleanPhone, membre_id: membre.id, state: 'await_gmail' })
+      .insert({ phone: cleanPhone, membre_id: membre.id, state: 'idle' })
       .select()
       .single()
     session = newSession
-  }
 
-  // ── État : en attente de Gmail OAuth ────────────────────────────────────────
-  if (session.state === 'await_gmail') {
-    const { data: token } = await supabase
-      .from('gmail_tokens')
-      .select('id')
-      .eq('membre_id', membre.id)
-      .single()
-
-    if (token) {
-      await supabase.from('bot_sessions').update({ state: 'idle' }).eq('id', session.id)
-      await sendMsg(phone, `✅ Compte activé ! Bienvenue ${membre.prenom} 👋\n\nSolde actuel : ${membre.credits} crédit${membre.credits > 1 ? 's' : ''}\n\n${MENU}`)
-    } else {
-      const oauthUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/gmail?phone=${cleanPhone}`
-      await sendMsg(phone, `Bonjour ${membre.prenom} 👋\n\nPour activer votre compte Topavis, connectez votre Gmail :\n\n🔗 ${oauthUrl}\n\nCette étape vérifie votre identité. Elle ne prend que 30 secondes.`)
-    }
+    // Premier message de bienvenue
+    await sendMsg(phone, `Bienvenue sur Topavis ${membre.prenom} 👋\n\nSolde actuel : ${membre.credits} crédit${membre.credits > 1 ? 's' : ''}\n\n${MENU}`)
     return
   }
 
