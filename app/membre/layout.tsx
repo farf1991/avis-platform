@@ -1,10 +1,7 @@
-import MembreNav from '@/components/membre/MembreNav'
-
 export default function MembreLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <MembreNav />
-      <main className="max-w-2xl mx-auto px-4 py-8">{children}</main>
+    <div className="min-h-screen min-h-dvh bg-[#0a0a12]">
+      {children}
     </div>
   )
 }
