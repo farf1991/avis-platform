@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { createBrowserClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
@@ -10,6 +10,8 @@ type DashboardData = {
   demande: any | null
   screenshot_en_attente: boolean
 }
+
+const supabase = createBrowserClient()
 
 export default function MembrePage() {
   const [data, setData] = useState<DashboardData | null>(null)
@@ -22,14 +24,13 @@ export default function MembrePage() {
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
-  const supabase = createBrowserClient()
 
-  const getToken = useCallback(async () => {
+  const getToken = async () => {
     const { data: { session } } = await supabase.auth.getSession()
     return session?.access_token || ''
-  }, [supabase])
+  }
 
-  const load = useCallback(async () => {
+  const load = async () => {
     const token = await getToken()
     if (!token) { router.push('/login'); return }
     const res = await fetch('/api/membre/dashboard', {
@@ -38,9 +39,9 @@ export default function MembrePage() {
     if (!res.ok) { router.push('/login'); return }
     setData(await res.json())
     setLoading(false)
-  }, [getToken, router])
+  }
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { load() }, [])
 
   useEffect(() => {
     if (!data?.mission) return
@@ -55,7 +56,7 @@ export default function MembrePage() {
     tick()
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
-  }, [data?.mission, load])
+  }, [data?.mission?.id])
 
   const donnerAvis = async () => {
     setActionLoading(true)
